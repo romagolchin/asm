@@ -5,9 +5,11 @@
 #include <cstring>
 #include <iostream>
 #include <vector>
+#include <ctime>
+#include <cstdlib>
 
 const int N = 1 << 15;
-const int I = 0;
+const int I = 1 << 10;
 
 int main() {
     srand(time(0));
@@ -20,9 +22,13 @@ int main() {
         }
         out << (t + "\n");
     }
-    for (int i = 0; i < 8 * 2049; ++i)
-        out << "a ";
-    out << '\n';
+//    for (int i = 0; i < (1 << 20); ++i)
+//        out << "a ";
+//    out << '\n';
+//    for (int i = 0; i < (1 << 20); ++i) {
+//        out << " a";
+//    }
+//    out << '\n';
     out.close();
     return 0;
 }

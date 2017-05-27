@@ -54,7 +54,6 @@ size_t asm_num_words(const std::string &s) {
         }
         add_res += (str[i] == ' ' && str[i + 1] != ' ');
     }
-
     __m128i res = _mm_set_epi32(0, 0, 0, 0);
     __m128i sum = _mm_set_epi32(0, 0, 0, 0);
     size_t limit = (len - offset) / 16;
@@ -63,12 +62,12 @@ size_t asm_num_words(const std::string &s) {
                 reinterpret_cast<const __m128i *>(str + j)
         );
         str_fragment = _mm_cmpeq_epi8(str_fragment, reg_spaces);
-        __m128i shifted_str_fragment = _mm_slli_si128(str_fragment, 1);
-        if (i > 0 && str[j - 1] == ' ')
-            shifted_str_fragment = _mm_or_si128(shifted_str_fragment, _mm_set_epi32(0, 0, 0, 0xff));
+        __m128i shifted_str_fragment = _mm_bsrli_si128(str_fragment, 1);
+        if (j + 16 < len && str[j + 16] == ' ')
+            shifted_str_fragment = _mm_or_si128(shifted_str_fragment, _mm_set_epi32(0xff000000, 0, 0, 0));
         // set least significant bit to 1 of each byte iff str_fragment has space at this position and
         // shifted_str_fragment hasn't
-        __m128i count = _mm_and_si128(_mm_andnot_si128(str_fragment, shifted_str_fragment), mask);
+        __m128i count = _mm_and_si128(_mm_andnot_si128(shifted_str_fragment, str_fragment), mask);
         sum = _mm_add_epi8(sum, count);
         if ((i == limit - 1) || ((i + 1) % 255 == 0)) {
             // popcount of sum in log log time
@@ -98,13 +97,11 @@ size_t asm_num_words(const std::string &s) {
 
     for (size_t i = offset + ((len - offset) / 16) * 16; i + 1 < len; ++i)
         add_res += (str[i] == ' ' && str[i + 1] != ' ');
-
     union {
         __m128i reg;
         size_t a[2];
     } nw;
     _mm_storel_epi64(&nw.reg, res);
-
     return nw.a[0] + add_res;
 }
 
@@ -113,15 +110,6 @@ int main() {
     srand(time(0));
     std::vector<std::string> test;
     std::vector<size_t> ind;
-    test.push_back("aba caba baba");
-    test.push_back("aaa ");
-    test.push_back("Running this 3459 times...");
-    test.push_back("\0");
-    test.push_back("  ");
-    test.push_back(" aa ");
-    test.push_back(" aa gg wwwww ");
-    test.push_back("aa ");
-    test.push_back("aa");
     std::vector<size_t> answers;
     std::vector<size_t> asm_answers;
     std::ifstream in("test");
@@ -150,13 +138,13 @@ int main() {
         asm_answers.push_back(asm_num_words(t));
     }
     after = std::chrono::high_resolution_clock::now();
-    std::cout << std::endl;
     std::chrono::duration<double> asm_elapsed = after - before;
     std::cout << "Elapsed time (asm): " << asm_elapsed.count() << "s\n";
+    if (asm_elapsed.count() >= 1e-9)
     std::cout << elapsed / asm_elapsed << " times faster" << std::endl;
     for (size_t it = 0; it < answers.size(); ++it) {
         if (answers[it] != asm_answers[it]) {
-            printf("'%s'\n", test[it].substr(ind[it]).c_str());
+            printf("'%s'\n", test[it].c_str());
             std::cout << answers[it] << ' ' << asm_answers[it] << std::endl;
             std::cout << it << std::endl;
             assert(false);
