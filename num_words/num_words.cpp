@@ -13,6 +13,31 @@
 #include <chrono>
 #include <fstream>
 
+const int N = 1 << 15;
+const int I = 1 << 10;
+const int K = 1 << 12;
+
+
+void gen() {
+    srand(time(0));
+    std::ofstream out("test");
+    for (int i = 0; i < I; ++i) {
+        std::string t;
+        for (int j = 0; j < N; ++j) {
+            int x = rand() % 3;
+            t += x == 0 ? ' ' : ('a' + x - 1);
+        }
+        out << (t + "\n");
+    }
+    for (int i = 0; i < K; ++i)
+        out << "a ";
+    out << '\n';
+    for (int i = 0; i < K; ++i) {
+        out << " a";
+    }
+    out << '\n';
+    out.close();
+}
 
 
 size_t num_words(const std::string &s) {
@@ -26,12 +51,7 @@ size_t num_words(const std::string &s) {
 }
 
 
-__m128i mask = _mm_set_epi32(0x01010101, 0x01010101, 0x01010101, 0x01010101);
-std::string string(16, ' ');
-const char *spaces = string.c_str();
-__m128i reg_spaces = _mm_loadu_si128(
-        reinterpret_cast<const __m128i *>(spaces)
-);
+const __m128i reg_spaces = _mm_set_epi8(32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32);
 
 void print_128i(__m128i reg) {
     union {
@@ -77,52 +97,62 @@ size_t asm_num_words(const std::string &s) {
     return R + add_res;
 }
 
+void test(int times = 100) {
+    bool ok = true;
+    double sum = 0.;
+    double asm_sum = 0.;
+    for (int it = 0; it < times && ok; ++it) {
+        gen();
+        std::vector<std::string> test;
+        std::vector<size_t> answers;
+        std::vector<size_t> asm_answers;
+        std::ifstream in("test");
+        std::string s;
+        if (in.is_open()) {
+            while (!in.eof()) {
+                std::getline(in, s);
+                test.push_back(s);
+            }
+            in.close();
+        }
+        auto before = std::chrono::high_resolution_clock::now();
+        for (size_t i = 0; i < test.size(); ++i) {
+            std::string t = test[i];
+            answers.push_back(num_words(t));
+        }
+        auto after = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> elapsed = after - before;
+        sum += elapsed.count();
+        std::cout << "Elapsed time (straightforward): " << elapsed.count() << "s\n";
+        before = std::chrono::high_resolution_clock::now();
+        for (size_t i = 0; i < test.size(); ++i) {
+            std::string t = test[i];
+            asm_answers.push_back(asm_num_words(t));
+        }
+        after = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> asm_elapsed = after - before;
+        asm_sum += asm_elapsed.count();
+        std::cout << "Elapsed time (asm): " << asm_elapsed.count() << "s\n";
+        if (asm_elapsed.count() >= 1e-9)
+            std::cout << elapsed / asm_elapsed << " times faster" << std::endl;
+        for (size_t j = 0; j < answers.size(); ++j) {
+            if (answers[j] != asm_answers[j]) {
+                std::cout << answers[j] << ' ' << asm_answers[j] << std::endl;
+                printf("'%s'\n", test[j].c_str());
+                std::cout << j << std::endl;
+                ok = false;
+                break;
+            }
+        }
+        if (it != 0 && it % 10 == 0)
+            printf("%d tests passed\n", it + 1);
+        if (it == times - 1 || !ok)
+            printf("on average : %lf ", sum / asm_sum);
+    }
+}
+
 
 int main() {
-    srand(time(0));
-    std::vector<std::string> test;
-    test.push_back("");
-    std::vector<size_t> ind;
-    std::vector<size_t> answers;
-    std::vector<size_t> asm_answers;
-    std::ifstream in("test");
-    std::string s;
-    if (in.is_open()) {
-        while (!in.eof()) {
-            std::getline(in, s);
-            test.push_back(s);
-        }
-        in.close();
-    }
-//    for (std::string t : test) {
-//        ind.push_back(t.empty() ? 0 : rand() % t.length());
-//    }
-    auto before = std::chrono::high_resolution_clock::now();
-    for (size_t i = 0; i < test.size(); ++i) {
-        std::string t = test[i];
-        answers.push_back(num_words(t));
-    }
-    auto after = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> elapsed = after - before;
-    std::cout << "Elapsed time (straightforward): " << elapsed.count() << "s\n";
-    before = std::chrono::high_resolution_clock::now();
-    for (size_t i = 0; i < test.size(); ++i) {
-        std::string t = test[i];
-        asm_answers.push_back(asm_num_words(t));
-    }
-    after = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> asm_elapsed = after - before;
-    std::cout << "Elapsed time (asm): " << asm_elapsed.count() << "s\n";
-    if (asm_elapsed.count() >= 1e-9)
-    std::cout << elapsed / asm_elapsed << " times faster" << std::endl;
-    for (size_t it = 0; it < answers.size(); ++it) {
-        if (answers[it] != asm_answers[it]) {
-            std::cout << answers[it] << ' ' << asm_answers[it] << std::endl;
-            printf("'%s'\n", test[it].c_str());
-            std::cout << it << std::endl;
-//            assert(false);
-        }
-    }
-
+    test();
     return 0;
 }
