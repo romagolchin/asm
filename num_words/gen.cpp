@@ -10,6 +10,7 @@
 
 const int N = 1 << 15;
 const int I = 1 << 10;
+const int K = 1 << 12;
 
 int main() {
     srand(time(0));
@@ -22,13 +23,13 @@ int main() {
         }
         out << (t + "\n");
     }
-//    for (int i = 0; i < (1 << 20); ++i)
-//        out << "a ";
-//    out << '\n';
-//    for (int i = 0; i < (1 << 20); ++i) {
-//        out << " a";
-//    }
-//    out << '\n';
+    for (int i = 0; i < K; ++i)
+        out << "a ";
+    out << '\n';
+    for (int i = 0; i < K; ++i) {
+        out << " a";
+    }
+    out << '\n';
     out.close();
     return 0;
 }
