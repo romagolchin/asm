@@ -19,20 +19,20 @@
 #endif
 
 
-const size_t align = sizeof(__m128i);
+const size_t alignment = sizeof(__m128i);
 
 void vectorized_memcpy(void *dst, const void *src, size_t count) {
     size_t vectorization_begin = 0;
     const char *char_src = static_cast<const char *>(src);
     char *char_dst = static_cast<char *> (dst);
     for (size_t i = 0;; i++) {
-        if ((i >= count) || ((reinterpret_cast<size_t >(dst) + i) % align == 0)) {
+        if ((i >= count) || ((reinterpret_cast<size_t >(dst) + i) % alignment == 0)) {
             vectorization_begin = i;
             break;
         }
         *(char_dst + i) = *(char_src + i);
     }
-    size_t vectorization_length = ((count - vectorization_begin) / align) * align;
+    size_t vectorization_length = ((count - vectorization_begin) / alignment) * alignment;
     size_t vectorization_end = vectorization_begin + vectorization_length;
     DB(vectorization_begin)
     DB(vectorization_end)
@@ -77,27 +77,6 @@ bool is_aligned(void const* ptr, size_t alignment)
     return (reinterpret_cast<size_t>(ptr) % alignment) == 0;
 }
 
-void copy_nt_asm(void* dst, void const* src, size_t N)
-{
-    assert(is_aligned(dst, sizeof(__m128i)));
-    assert(is_aligned(src, sizeof(__m128i)));
-    assert((N % sizeof(__m128i)) == 0);
-
-    __m128i tmp;
-    __asm__ volatile(
-    "1:"
-            "movdqa     (%0), %3\n"
-            "movntdq    %3, (%1)\n"
-            "add        $16, %0\n"
-            "add        $16, %1\n"
-            "sub        $16, %2\n"
-            "jnz        1b\n"
-    : "=r"(dst), "=r"(src), "=r"(N), "=x"(tmp)
-    : "0"(dst),  "1"(src),  "2"(N)
-    : "memory", "cc"
-    );
-}
-
 void test_correctness() {
     const size_t size = 1000;
     size_t first_count = size;
@@ -117,13 +96,13 @@ void test_correctness() {
     std::vector<std::pair<size_t, size_t>> tests;
     size_t max_count = std::min(first_count, second_count);
     tests.emplace_back(0, 0);
-    tests.emplace_back(0, align - 1);
-    tests.emplace_back(0, 2 * align - 1);
+    tests.emplace_back(0, alignment - 1);
+    tests.emplace_back(0, 2 * alignment - 1);
     tests.emplace_back(0, max_count);
-    for (size_t offset = 1; offset < align; ++offset) {
-        tests.emplace_back(offset, align - offset);
-        tests.emplace_back(offset, 5 * align - offset);
-        tests.emplace_back(offset, 2 * align - offset + 1);
+    for (size_t offset = 1; offset < alignment; ++offset) {
+        tests.emplace_back(offset, alignment - offset);
+        tests.emplace_back(offset, 5 * alignment - offset);
+        tests.emplace_back(offset, 2 * alignment - offset + 1);
     }
     printf("Testing...\n");
     for (size_t i = 7; i < tests.size(); ++i) {
@@ -156,15 +135,7 @@ void test_perfomance() {
     printf("vectorized_memcpy took %lf s\n", elapsed.count());
 }
 
-void test_nt() {
-    const size_t N = 100000000;
-    std::vector<char> a(N), b(N);
-    copy_nt_asm(a.data(), b.data(), 0);
-    printf("OK\n");
-}
-
 int main() {
-//    test_nt();
     test_correctness();
     test_perfomance();
     return 0;
