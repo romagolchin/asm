@@ -9,7 +9,6 @@
 #include <iostream>
 #include <chrono>
 #include <cstring>
-#include <cassert>
 #ifdef DEBUG
 #define FUN std::cout << __func__ << '\n';
 #define DB(x) std::cout << #x << " = " << x << '\n';
@@ -39,26 +38,23 @@ void vectorized_memcpy(void *dst, const void *src, size_t count) {
     DB(vectorization_length)
     char_src += vectorization_begin;
     char_dst += vectorization_begin;
-//    for (size_t i = vectorization_begin; i + align <= count; i += align) {
-        __m128i xmm_tmp;
-        __asm__ volatile (
-        "0:"
-                "cmp $0, %3\n\t"
-                "jne 1f\n\t"
-                "jmp 2f\n\t"
-        "1:"
-                "movdqu (%1), %0\n\t"
-                "movntdq %0, (%2)\n\t"
-                "add $16, %1\n\t"
-                "add $16, %2\n\t"
-                "sub $16, %3\n\t"
-                "jnz 1b\n\t"
-        "2:"
-                "nop"
-        :"=x"(xmm_tmp), "=r"(char_src), "=r"(char_dst), "=r"(vectorization_length)
-        :"1"(char_src), "2"(char_dst), "3"(vectorization_length)
-        );
-//    }
+    __m128i xmm_tmp;
+    __asm__ volatile (
+        "jmp 1f\n\t"
+    "0:"
+        "movdqu (%1), %0\n\t"
+        "movntdq %0, (%2)\n\t"
+        "add $16, %1\n\t"
+        "add $16, %2\n\t"
+        "sub $16, %3\n\t"
+        "jnz 0b\n\t"
+    "1:"
+        "cmp $0, %3\n\t"
+        "jne 0b\n\t"
+    :"=x"(xmm_tmp), "=r"(char_src), "=r"(char_dst), "=r"(vectorization_length)
+    :"1"(char_src), "2"(char_dst), "3"(vectorization_length)
+    :"memory", "cc"
+    );
     for (size_t i = 0; i < count - vectorization_end; ++i) {
         *(char_dst + i) = *(char_src + i);
     }
@@ -72,23 +68,18 @@ bool check_equality(const void *ptr, const void *a_ptr, size_t sz) {
 }
 
 
-bool is_aligned(void const* ptr, size_t alignment)
-{
-    return (reinterpret_cast<size_t>(ptr) % alignment) == 0;
-}
-
 void test_correctness() {
     const size_t size = 1000;
     size_t first_count = size;
     void *first_allocated = malloc(1024);
-    void *copy_from = std::align(align, size, first_allocated, first_count);
+    void *copy_from = std::align(alignment, size, first_allocated, first_count);
     if (!copy_from) {
         printf("failed to align copy_from\n");
         return;
     }
     size_t second_count = size;
     void *second_allocated = malloc(1024);
-    void *copy_to = std::align(align, size, second_allocated, first_count);
+    void *copy_to = std::align(alignment, size, second_allocated, first_count);
     if (!copy_to) {
         printf("failed to align copy_to\n");
         return;
