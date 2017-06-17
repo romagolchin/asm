@@ -9,6 +9,7 @@
 #include <iostream>
 #include <chrono>
 #include <cstring>
+
 #ifdef DEBUG
 #define FUN (std::cout << __func__ << '\n')
 #define DB(x) (std::cout << #x << " = " << x << '\n')
@@ -40,18 +41,17 @@ void vectorized_memcpy(void *dst, const void *src, size_t count) {
     char_dst += vectorization_begin;
     __m128i xmm_tmp;
     __asm__ volatile (
-        "jmp 1f\n\t"
-    "0:"
-        "movdqu (%1), %0\n\t"
-        "movntdq %0, (%2)\n\t"
-        "add $16, %1\n\t"
-        "add $16, %2\n\t"
-        "sub $16, %3\n\t"
-        "jnz 0b\n\t"
-        "sfence\n\t"
-    "1:"
-        "cmp $0, %3\n\t"
-        "jne 0b\n\t"
+        "test %3, %3\n\t"
+        "je 1f\n\t"
+        "0:"
+            "movdqu (%1), %0\n\t"
+            "movntdq %0, (%2)\n\t"
+            "add $16, %1\n\t"
+            "add $16, %2\n\t"
+            "sub $16, %3\n\t"
+            "jnz 0b\n\t"
+            "sfence\n\t"
+        "1:"
     :"=x"(xmm_tmp), "=r"(char_src), "=r"(char_dst), "=r"(vectorization_length)
     :"1"(char_src), "2"(char_dst), "3"(vectorization_length)
     :"memory", "cc"
