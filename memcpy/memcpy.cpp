@@ -48,10 +48,10 @@ void vectorized_memcpy(void *dst, const void *src, size_t count) {
         "add $16, %2\n\t"
         "sub $16, %3\n\t"
         "jnz 0b\n\t"
+        "sfence\n\t"
     "1:"
         "cmp $0, %3\n\t"
         "jne 0b\n\t"
-        "sfence\n\t"
     :"=x"(xmm_tmp), "=r"(char_src), "=r"(char_dst), "=r"(vectorization_length)
     :"1"(char_src), "2"(char_dst), "3"(vectorization_length)
     :"memory", "cc"
