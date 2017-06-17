@@ -10,8 +10,8 @@
 #include <chrono>
 #include <cstring>
 #ifdef DEBUG
-#define FUN std::cout << __func__ << '\n';
-#define DB(x) std::cout << #x << " = " << x << '\n';
+#define FUN (std::cout << __func__ << '\n')
+#define DB(x) (std::cout << #x << " = " << x << '\n')
 #else
 #define FUN
 #define DB(x)
@@ -33,9 +33,9 @@ void vectorized_memcpy(void *dst, const void *src, size_t count) {
     }
     size_t vectorization_length = ((count - vectorization_begin) / alignment) * alignment;
     size_t vectorization_end = vectorization_begin + vectorization_length;
-    DB(vectorization_begin)
-    DB(vectorization_end)
-    DB(vectorization_length)
+    DB(vectorization_begin);
+    DB(vectorization_end);
+    DB(vectorization_length);
     char_src += vectorization_begin;
     char_dst += vectorization_begin;
     __m128i xmm_tmp;
@@ -51,6 +51,7 @@ void vectorized_memcpy(void *dst, const void *src, size_t count) {
     "1:"
         "cmp $0, %3\n\t"
         "jne 0b\n\t"
+        "sfence\n\t"
     :"=x"(xmm_tmp), "=r"(char_src), "=r"(char_dst), "=r"(vectorization_length)
     :"1"(char_src), "2"(char_dst), "3"(vectorization_length)
     :"memory", "cc"
@@ -96,7 +97,7 @@ void test_correctness() {
         tests.emplace_back(offset, 2 * alignment - offset + 1);
     }
     printf("Testing...\n");
-    for (size_t i = 7; i < tests.size(); ++i) {
+    for (size_t i = 0; i < tests.size(); ++i) {
         auto t = tests[i];
         void *dst = static_cast<void *> (static_cast<char *>(copy_to) + t.first);
         size_t count = t.second;
@@ -112,7 +113,8 @@ void test_correctness() {
 }
 
 void test_perfomance() {
-    const size_t N = 100000000;
+    printf("Measuring time\n");
+    const size_t N = 1000000000;
     std::vector<char> a(N), b(N);
     auto start = std::chrono::high_resolution_clock::now();
     memcpy(a.data(), b.data(), N);
