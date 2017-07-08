@@ -45,7 +45,6 @@ int main(int argc, char const *argv[]) {
             lam_fun
     );
     tr_fun.get()(1, 2, 3, 4, 5, 6.f, 7.f, 8.f, 25, 9.f, 10.f, 11.f, 12.f, 13.f, 14.f, 15.f, 16);
-//    lam_fun(1, 2, 3, 4, 5, 6.f, 7.f, 8.f, 25, 9.f, 10.f, 11.f, 12.f, 13.f, 14.f, 15.f, 16);
     auto lam_gun = [](int i1, int i2, int i3, int i4, int i5, float f1, float f2, float f3, float f4, float f5,
                       float f6, float f7, float f8, float f9, float f10, int i6) {
         printf("%d %d %d %d %d %f %f %f %f %f %f %f %f %f %f %d\n", i1, i2, i3, i4, i5, f1, f2, f3, f4, f5, f6, f7, f8,
@@ -77,7 +76,6 @@ int main(int argc, char const *argv[]) {
     st s3 = "ddd";
     st s4 = "eee";
     st s5 = "fff";
-//    lam6(&s0, &s1, &s2, &s3, 0., 0., 0., 0., 0., 0., 0., 0., &s4, &s5, 1.23f, 2.34);
     tr6.get()(&s0, &s1, &s2, &s3, 0., 0., 0., 0., 0., 0., 0., 0., &s4, &s5, 1.23f, 2.34);
     trampoline<double(st *, st *, st *, st *, double, double, double, double, double, double, double, double, st *,
                       st *, float, double)> tr_copy(tr6);
