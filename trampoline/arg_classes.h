@@ -47,17 +47,17 @@ struct arg_classes<First, Rest...> {
     static const int SSE = arg_classes<Rest...>::SSE;
 };
 
-
 template<typename S, typename T>
 struct helper {
 };
 
-
+// helper acc [] = acc
 template<typename... Acc_args>
 struct helper<arg_classes<Acc_args...>, arg_classes<>> {
     typedef arg_classes<Acc_args...> ret;
 };
 
+// helper acc (x:xs) = x:acc
 template<typename... Acc_args, typename First, typename... Rest>
 struct helper<arg_classes<Acc_args...>, arg_classes<First, Rest...>>
         : helper<arg_classes<First, Acc_args...>, arg_classes<Rest...>> {

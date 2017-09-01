@@ -14,6 +14,7 @@
 #include <functional>
 #include "allocator.h"
 #include "arg_classes.h"
+
 #ifdef DEBUG
 #define FUN (std::cout << __func__ << '\n')
 #define DB(x) (std::cout << #x << " = " << x << '\n')
